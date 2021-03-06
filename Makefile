@@ -1,6 +1,6 @@
 CC=g++
 FLAGS=-O3 -fopenmp
-SOURCES=speedtest.cpp
+SOURCES=src/speedtest.cpp
 EXECUTABLE=bin/speedtest
 
 all: $(SOURCES)

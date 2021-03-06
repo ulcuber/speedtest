@@ -1,6 +1,6 @@
 #include <iostream>
 #include <chrono>
-#define OPT 1
+#include <functional>
 
 using namespace std;
 
@@ -9,10 +9,9 @@ double a[N][N];
 double b[N][N];
 double c[N][N];
 
-int main()
+void fill()
 {
-    int i, j, k;
-    double cc = 0;
+    int i, j;
 
 #pragma omp parallel for shared(a, b) private(i, j)
     for (i = 0; i < N; ++i)
@@ -21,17 +20,19 @@ int main()
             a[i][j] = (rand() % 100) / 100.0 + 1.0;
             b[i][j] = (rand() % 100) / 100.0 + 1.0;
         }
+}
 
-    auto start = chrono::steady_clock::now();
+void calcTransposed()
+{
+    int i, j, k;
+    double cc = 0;
 
-#ifdef OPT
 #pragma omp parallel for shared(a, b) private(i, j)
     for (i = 0; i < N; ++i)
         for (j = 0; j < N; ++j)
         {
             swap(b[i][j], b[j][i]);
         }
-#endif
 
 #pragma omp parallel for shared(a, b, c) private(i, j, k) schedule(static)
     for (i = 0; i < N; ++i)
@@ -39,18 +40,52 @@ int main()
         {
             cc = 0;
             for (k = 0; k < N; ++k)
-#ifdef OPT
+            {
                 cc += a[i][k] * b[j][k];
-#else
-                cc += a[i][k] * b[k][j];
-#endif
+            }
             c[i][j] = cc;
         }
+}
 
+void calc()
+{
+    int i, j, k;
+    double cc = 0;
+
+#pragma omp parallel for shared(a, b, c) private(i, j, k) schedule(static)
+    for (i = 0; i < N; ++i)
+        for (j = 0; j < N; ++j)
+        {
+            cc = 0;
+            for (k = 0; k < N; ++k)
+            {
+                cc += a[i][k] * b[k][j];
+            }
+            c[i][j] = cc;
+        }
+}
+
+auto measure(function<void()> cb)
+{
+    fill();
+
+    auto start = chrono::steady_clock::now();
+    cb();
     auto end = chrono::steady_clock::now();
+
     chrono::duration<double> elapsedSeconds = end - start;
 
-    cout << elapsedSeconds.count() << endl;
+    return elapsedSeconds.count();
+}
+
+int main()
+{
+    auto with = measure(calcTransposed);
+    auto without = measure(calc);
+
+    cout << "Using CPU cache: " << with << endl;
+    cout << "Without CPU cache: " << without << endl;
+    cout << "Diff times: " << without / with << endl;
 
     return 0;
 }
