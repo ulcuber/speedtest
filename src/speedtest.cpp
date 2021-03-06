@@ -85,7 +85,11 @@ int main()
 
     cout << "Using CPU cache: " << with << endl;
     cout << "Without CPU cache: " << without << endl;
-    cout << "Diff times: " << without / with << endl;
+
+    cout << "Using CPU cache reciprocal: " << 1000 / with << endl;
+    cout << "Without CPU cache reciprocal: " << 1000 / without << endl;
+
+    cout << "Relation: " << without / with << endl;
 
     return 0;
 }
