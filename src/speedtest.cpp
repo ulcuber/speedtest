@@ -2,8 +2,6 @@
 #include <chrono>
 #include <functional>
 
-using namespace std;
-
 const int N = 1000;
 double a[N][N];
 double b[N][N];
@@ -31,10 +29,33 @@ void calcTransposed()
     for (i = 0; i < N; ++i)
         for (j = 0; j < N; ++j)
         {
-            swap(b[i][j], b[j][i]);
+            std::swap(b[i][j], b[j][i]);
         }
 
 #pragma omp parallel for shared(a, b, c) private(i, j, k) schedule(static)
+    for (i = 0; i < N; ++i)
+        for (j = 0; j < N; ++j)
+        {
+            cc = 0;
+            for (k = 0; k < N; ++k)
+            {
+                cc += a[i][k] * b[j][k];
+            }
+            c[i][j] = cc;
+        }
+}
+
+void calcTransposedSingleCore()
+{
+    int i, j, k;
+    double cc = 0;
+
+    for (i = 0; i < N; ++i)
+        for (j = 0; j < N; ++j)
+        {
+            std::swap(b[i][j], b[j][i]);
+        }
+
     for (i = 0; i < N; ++i)
         for (j = 0; j < N; ++j)
         {
@@ -65,15 +86,15 @@ void calc()
         }
 }
 
-auto measure(function<void()> cb)
+auto measure(std::function<void()> cb)
 {
     fill();
 
-    auto start = chrono::steady_clock::now();
+    auto start = std::chrono::steady_clock::now();
     cb();
-    auto end = chrono::steady_clock::now();
+    auto end = std::chrono::steady_clock::now();
 
-    chrono::duration<double> elapsedSeconds = end - start;
+    std::chrono::duration<double> elapsedSeconds = end - start;
 
     return elapsedSeconds.count();
 }
@@ -82,14 +103,12 @@ int main()
 {
     auto with = measure(calcTransposed);
     auto without = measure(calc);
+    auto singleCore = measure(calcTransposedSingleCore);
 
-    cout << "Using CPU cache: " << with << endl;
-    cout << "Without CPU cache: " << without << endl;
-
-    cout << "Using CPU cache reciprocal: " << 1000 / with << endl;
-    cout << "Without CPU cache reciprocal: " << 1000 / without << endl;
-
-    cout << "Relation: " << without / with << endl;
+    std::cout << "Using CPU cache: " << with << "s / " << 1000 / with << std::endl;
+    std::cout << "Without CPU cache: " << without << "s / " << 1000 / without << std::endl;
+    std::cout << "Relation without / with cache: " << without / with << std::endl;
+    std::cout << "Single Core: " << singleCore << "s / " << 1000 / singleCore << std::endl;
 
     return 0;
 }
